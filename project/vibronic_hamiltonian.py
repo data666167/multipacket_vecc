@@ -252,6 +252,17 @@ class vibronic_hamiltonian(object):
 
         return
 
+    def run_info(self):
+        h_order = 0 
+        if self.trunc.at_least_linear:
+            h_order += 1
+            if self.trunc.at_least_quadratic:
+                h_order += 1
+                 
+        return({'Z_truncation_order':self.Z_truncation_order,
+                'h_order':h_order,
+                })
+
     def _check_truncation_info(self):
         """ Some debugging and output just to make sure we didn't pick conflicting values """
         hamiltonian_order = vIO.extract_maximum_order_of_model(self.model)
@@ -967,7 +978,7 @@ class vibronic_hamiltonian(object):
         end_constant_slice_index = start_constant_slice_index + A * A
         Z[0] = np.reshape(
             y_tensor[start_constant_slice_index:end_constant_slice_index],
-            newshape=(A, A)
+            shape=(A, A)
         )
 
         if self.Z_truncation_order >= 1:
@@ -976,7 +987,7 @@ class vibronic_hamiltonian(object):
             end_linear_slice_index = start_linear_slice_index + A * A * N
             Z[1] = np.reshape(
                 y_tensor[start_linear_slice_index: end_linear_slice_index],
-                newshape=(A, A, N)
+                shape=(A, A, N)
             )
 
         if self.Z_truncation_order >= 2:
@@ -985,7 +996,7 @@ class vibronic_hamiltonian(object):
             end_quadratic_slice_index = start_quadratic_slice_index + A * A * N * N
             Z[2] = np.reshape(
                 y_tensor[start_quadratic_slice_index: end_quadratic_slice_index],
-                newshape=(A, A, N, N)
+                shape=(A, A, N, N)
             )
 
         if self.Z_truncation_order >= 3:
@@ -994,7 +1005,7 @@ class vibronic_hamiltonian(object):
             end_cubic_slice_index = start_cubic_slice_index + A * A * N * N * N
             Z[3] = np.reshape(
                 y_tensor[start_cubic_slice_index: end_cubic_slice_index],
-                newshape=(A, A, N, N, N)
+                shape=(A, A, N, N, N)
             )
 
         # ------------------------------ restore t tensor ----------------------------
@@ -1016,7 +1027,7 @@ class vibronic_hamiltonian(object):
         end_constant_slice_index = start_constant_slice_index + A
         T[0] = np.reshape(
             y_tensor[start_constant_slice_index: end_constant_slice_index],
-            newshape=(A, )
+            shape=(A, )
         )
 
         if self.T_truncation_order >= 1:
@@ -1025,7 +1036,7 @@ class vibronic_hamiltonian(object):
             end_linear_slice_index = start_linear_slice_index + A * N
             T[1] = np.reshape(
                 y_tensor[start_linear_slice_index: end_linear_slice_index],
-                newshape=(A, N)
+                shape=(A, N)
             )
 
         if self.T_truncation_order >= 2:
@@ -1034,7 +1045,7 @@ class vibronic_hamiltonian(object):
             end_quadratic_slice_index = start_quadratic_slice_index + A * N * N
             T[2] = np.reshape(
                 y_tensor[start_quadratic_slice_index: end_quadratic_slice_index],
-                newshape=(A, N, N)
+                shape=(A, N, N)
             )
 
         return Z, T
@@ -2092,7 +2103,7 @@ class vibronic_hamiltonian(object):
             compute_residual_2()
             compute_residual_3()
             """
-
+            z_three_eqns.global_GPU_flag = False
             # constant
             if not generated_flag:
                 residual[0] = self._f_z_0(H_bar_tilde, C, T_conj_dict, opt_flag)
@@ -2101,8 +2112,9 @@ class vibronic_hamiltonian(object):
                     residual[0] = np.zeros(shape=(A, ), dtype=complex)
                     args = (
                         residual[0], self.ansatz, self.gen_trunc,
-                        _special_T_conj, H_bar_tilde, C
+                        _special_T_conj, H_bar_tilde, C, np.einsum
                     )
+                    # breakpoint()
                     if not opt_flag:
                         if z_three_eqns.global_GPU_flag:  # replace later
                             z_three_eqns.gpu_add_m0_n0_HZ_terms(*args)
@@ -2136,7 +2148,7 @@ class vibronic_hamiltonian(object):
                         residual[1] = np.zeros(shape=(A, N), dtype=complex)
                         args = (
                             residual[1], self.ansatz, self.gen_trunc,
-                            _special_T_conj, H_bar_tilde, C
+                            _special_T_conj, H_bar_tilde, C, np.einsum
                         )
 
                         if not opt_flag:
@@ -2170,7 +2182,7 @@ class vibronic_hamiltonian(object):
                         residual[2] = np.zeros(shape=(A, N, N), dtype=complex)
                         args = (
                             residual[2], self.ansatz, self.gen_trunc,
-                            _special_T_conj, H_bar_tilde, C
+                            _special_T_conj, H_bar_tilde, C, np.einsum
                         )
 
                         if not opt_flag:
@@ -2208,7 +2220,7 @@ class vibronic_hamiltonian(object):
                         residual[3] = np.zeros(shape=(A, N, N, N), dtype=complex)
                         args = (
                             residual[3], self.ansatz, self.gen_trunc,
-                            _special_T_conj, H_bar_tilde, C
+                            _special_T_conj, H_bar_tilde, C, np.einsum 
                         )
 
                         if not opt_flag:
