@@ -2977,3 +2977,171 @@ class vibronic_hamiltonian(object):
         self.C_tau_cc.real = f_real(new_x)
         self.C_tau_cc.imag = f_imag(new_x)
         return
+    
+    # review function 
+    # recall how to deal with etdm
+    def sum_over_states(self, output_path, basis_size=40, T_initial=10000, T_final=100, N_step=10000, compare_with_TNOE=False):
+        """calculation thermal properties through sum over states"""
+        A, N = self.A, self.N
+        
+        assert N == 2, 'this sum over states calculation only works for 2 mode systems'
+        
+        def _construct_vibrational_Hamitonian(basis_size,surface_1,surface_2):
+            """construct vibrational Hamiltonian in H.O. basis"""
+            A,N = self.A, self.N
+            # Hamiltonian = np.zeros((basis_size, basis_size, basis_size, basis_size),dtype=complex)
+            # for a_1 in range(basis_size):
+            #     for a_2 in range(basis_size):
+            #         for b_1 in range(basis_size):
+            #             for b_2 in range(basis_size):
+            #                 if a_1 == b_1 and a_2 == b_2:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(0, 0)]
+                                
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] += h[(1, 1)][0, 0]*(b_1)+h[(1, 1)][1, 1]*(b_2)
+            #                 if a_1 == b_1+1 and a_2 == b_2-1:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(1, 1)][0, 1]*np.sqrt(b_1+1)*np.sqrt(b_2)
+            #                 if a_1 == b_1-1 and a_2 == b_2+1:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(1, 1)][1, 0]*np.sqrt(b_1)*np.sqrt(b_2+1)
+            #                 if a_1 == b_1+1 and a_2 == b_2:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(1, 0)][0]*np.sqrt(b_1+1)
+            #                     # breakpoint()
+            #                 if a_1 == b_1 and a_2 == b_2+1:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(1, 0)][1]*np.sqrt(b_2+1)
+            #                 if a_1 == b_1-1 and a_2 == b_2:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(0, 1)][0]*np.sqrt(b_1)
+            #                 if a_1 == b_1 and a_2 == b_2-1:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(0, 1)][1]*np.sqrt(b_2)
+            #                 if a_1 == b_1+2 and a_2 == b_2:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(2, 0)][0, 0]*np.sqrt(b_1+1)*np.sqrt(b_1+2)
+            #                 if a_1 == b_1+1 and a_2 == b_2+1:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = (h[(2, 0)][0, 1] + h[(2, 0)][1, 0])*np.sqrt(b_1+1)*np.sqrt(b_2+1)
+            #                 if a_1 == b_1 and a_2 == b_2+2:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(2, 0)][1, 1]*np.sqrt(b_2+1)*np.sqrt(b_2+2)
+            #                 if a_1 == b_1-2 and a_2 == b_2:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(0, 2)][0, 0]*np.sqrt(b_1)*np.sqrt(b_1-1)
+            #                 if a_1 == b_1-1 and a_2 == b_2-1:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = (h[(0, 2)][0, 1] + h[(0, 2)][1, 0])*np.sqrt(b_1)*np.sqrt(b_2)
+            #                 if a_1 == b_1 and a_2 == b_2-2:
+            #                     Hamiltonian[a_1, a_2, b_1, b_2] = h[(0, 2)][1, 1]*np.sqrt(b_2)*np.sqrt(b_2-1)
+            H = np.zeros([basis_size, basis_size, basis_size, basis_size], dtype=complex)
+            for a_1, a_2, b_1, b_2 in it.product(
+                range(basis_size), range(basis_size), range(basis_size), range(basis_size)
+            ):
+                index = (a_1, a_2, b_1, b_2)
+                # linear
+                # breakpoint()
+                if self.trunc.at_least_linear:
+                    if a_1 == b_1 and a_2 == b_2:
+                        H[index] += self.h[(0,0)][surface_1,surface_2] ##########    
+                    # hamiltonian terms associated with H(1, 0)
+                    if a_1 == b_1 + (1) and a_2 == b_2 + (0):
+                        H[index] += self.h[(1, 0)][surface_1,surface_2,0]*np.sqrt(b_1 + 1)
+                    if a_1 == b_1 + (0) and a_2 == b_2 + (1):
+                        H[index] += self.h[(1, 0)][surface_1,surface_2,1]*np.sqrt(b_2 + 1)
+                    # hamiltonian terms associated with H(0, 1)
+                    if a_1 == b_1 + (-1) and a_2 == b_2 + (0):
+                        H[index] += self.h[(0, 1)][surface_1,surface_2,0]*np.sqrt(b_1 + 0)
+                        # breakpoint()
+                    if a_1 == b_1 + (0) and a_2 == b_2 + (-1):
+                        H[index] += self.h[(0, 1)][surface_1,surface_2,1]*np.sqrt(b_2 + 0)
+                    # hamiltonian terms associated with H(1, 1)
+                    if a_1 == b_1 + (0) and a_2 == b_2 + (0):
+                        H[index] += 1*self.h[(1, 1)][surface_1,surface_2,0,0]*np.sqrt(b_1 + 0) * np.sqrt(b_1 + 0)
+                    if a_1 == b_1 + (1) and a_2 == b_2 + (-1):
+                        H[index] += 1*self.h[(1, 1)][surface_1,surface_2,0,1]*np.sqrt(b_1 + 1) * np.sqrt(b_2 + 0)
+                    if a_1 == b_1 + (-1) and a_2 == b_2 + (1):
+                        H[index] += 1*self.h[(1, 1)][surface_1,surface_2,1,0]*np.sqrt(b_1 + 0) * np.sqrt(b_2 + 1)
+                    if a_1 == b_1 + (0) and a_2 == b_2 + (0):
+                        H[index] += 1*self.h[(1, 1)][surface_1,surface_2,1,1]*np.sqrt(b_2 + 0) * np.sqrt(b_2 + 0)
+                
+                Hamiltonian = H.reshape(basis_size**N, basis_size**N)
+                # breakpoint()
+            return Hamiltonian
+
+        def construct_full_Hamitonian(basis_size):
+            """contruction the full vibronic Hamiltonian in FCI H.O. basis"""
+            A,N = self.A, self.N
+            # initialize the Hamiltonian
+            H_FCI = np.zeros([A, basis_size**N, A, basis_size**N],dtype=complex)
+            # contruction the full Hamiltonian surface by surface
+            for a, b in it.product(range(A), repeat=2):
+                # h = {}
+                # # cycle throught the each hamiltonian component for a specific componenet
+                # for block in self.h.keys():
+                #     if block != (0, 0):
+                #         h[block] = self.h[block][a, b, :]
+                #     else:
+                #         h[block] = self.h[block][a, b]
+                H_FCI[a, :, b][:] += _construct_vibrational_Hamitonian(basis_size,a,b)
+                # breakpoint()
+
+            H_FCI = H_FCI.reshape(A*basis_size**N, A*basis_size**N)
+                
+            # breakpoint()
+            return H_FCI
+        
+        def _ed_acf(finaltime,eigvecs,eigvals,basis_size,stepsize=0.1):
+            A = self.A
+            N = self.N
+            states_per_surface = basis_size**N
+            tdm_surfaces = self.E_tdm
+            
+            chi = np.asarray(self.E_tdm[0, :A], dtype=complex) 
+            
+            # bright state: phi0 = sum_b chi_b |b, 0,0>
+            phi0 = np.zeros(A * states_per_surface, dtype=complex)
+            for b in range(A):
+                phi0[b * states_per_surface + 0] = chi[b]
+            intensities = eigvecs.T
+            
+            coeffs = eigvecs.conj().T @ phi0
+            intensities = np.abs(coeffs)**2
+            
+            intensities = intensities / np.vdot(phi0, phi0).real
+            # handle the transition dipole moment between surfaces 
+            # when you diagonalize the surfaces we need to assign eigenstates to surfaces, tsince they are diagonal 
+            # i assume they U_ab should U_aa and thus we should multiply by the dipole momement, 
+            # I think this only works if eigenvecs are the same order as basis for the matrix  
+            
+            hbar = .6582119569
+            time = np.arange(0,finaltime+stepsize*2,stepsize*2) #*1E-15
+            ed_acf = np.zeros_like(time, dtype=complex)
+            
+            ed_acf = np.exp(-1j * np.outer(time, eigvals) / hbar) @ intensities
+            # for i in range(A):
+            #     tdm = tdm_surfaces[0,i]
+            #     intensities[i*states_per_surface:(i+1)*states_per_surface] *= 1 #tdm**2
+            
+            # for i, t in enumerate(time):
+            #     ed_acf[i] = np.sum(intensities * np.exp(-1j*(eigvals/hbar) * t))
+                
+            
+            breakpoint()
+            # ed_acf = np.einsum('xy -> y',ed_acf)
+            
+            return(time,ed_acf,intensities)
+        
+        
+        basis_used = 10
+        H = construct_full_Hamitonian(basis_size=basis_used)
+        evals, evecs = np.linalg.eigh(H)
+        time, ed_acf, _ = _ed_acf(10,evecs,evals,basis_used)
+        assert np.allclose(H, H.transpose())
+         
+        
+        
+        breakpoint()
+        
+        
+        # check Hermicity of the Hamitonian in H. O. basis
+        # diagonalize the Hamiltonian
+        E, V = np.linalg.eigh(H)
+        # store eigenvector and eigenvalues as class instances
+        self.E_val = E
+        self.V_val = V
+
+
+
+        return
+
+

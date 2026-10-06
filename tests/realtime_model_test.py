@@ -108,18 +108,37 @@ def vecc_propagation(model,model_name,output_path,prop_length=10,h_order=1,z_ord
      
     return(norm_acf_path)
 
+# VECC work 
+# def spectra_maker(acf_path):
+#     # should run autospec 
+#     return
 
-def spectra_maker(acf_path):
-    # should run autospec 
-    return
-
-# Write a proper main at some point
+# # Write a proper main at some point
 model_file_dir = '/home/oz_computron/Desktop/Research_idea/multipacket_VECC/t-amplitudes/data/input_json'
-# output dirs should have a user initialized folder for easy extensions 
+# # output dirs should have a user initialized folder for easy extensions 
 outputdir =  '/home/oz_computron/Desktop/Research_idea/multipacket_VECC/t-amplitudes/multipacket_data/initial_tests'
 
-model_ham,model_name = construct_hamiltonian('displaced_1.json',model_file_dir,1)
-acf_path = vecc_propagation(model=model_ham,model_name=model_name,output_path=outputdir,prop_length=10,h_order=1,z_order=2)
+# model_ham,model_name = construct_hamiltonian('displaced_1_nondegen.json',model_file_dir,1)
+# acf_path = vecc_propagation(model=model_ham,model_name=model_name,output_path=outputdir,prop_length=10,h_order=1,z_order=2)
 
+# ED work 
+model_ham,model_name = construct_hamiltonian('displaced_1_nondegen.json',model_file_dir,1)
+VECC_obj = vibronic_hamiltonian(model=model_ham,
+                                    model_name=model_name,
+                                    cc_truncation_order=1,
+                                    T_truncation_order=1,
+                                    calculate_population_flag=False,
+                                    hamiltonian_truncation_order=1,
+                                    Z_truncation_order=2) 
+VECC_obj.sum_over_states('lol')
+
+# self.h[1,1][0,0,1,1]*n_1 + self.h[1,1][0,0,0,0]*n_2 + self.h[0,0][0,0] -(self.h[1,0][0,0][0]**2)/self.h[1,1][0,0,0,0]
+# self.h[1,1][0,0,1,1]*n_1 + self.h[1,1][0,0,0,0]*n_2 + self.h[0,0][1,1] -(self.h[1,0][0,0][0]**2)/self.h[1,1][0,0,0,0]
+
+
+# self.h[1,1][0,0,0,0]
+# self.h[1,1][0,0,1,1]
+# self.h[0,0][0,0]
+# self.h[0,0][1,1]
 breakpoint()
 
